@@ -46,6 +46,10 @@ CGPoint GetCenterOfRect(CGRect rect) {
 	return CGPointMake(rect.origin.x+(rect.size.width/2), rect.origin.y+(rect.size.height/2));
 }
 
+CGEventRef DeleteEventCallback(CGEventTapProxy proxy, CGEventType type, CGEventRef event,void *refcon) {
+    return NULL;
+}
+
 @implementation CursorManager
 
 static CGRect window_center;
@@ -161,25 +165,33 @@ static CGRect window_center;
 			[self refreshApps:nil];
 		}
 	} else {
-			CGEventRef mouse_event = CGEventCreate(nil);
+		CGEventRef mouse_event = CGEventCreate(nil);
 		CGPoint mouse = CGEventGetLocation(mouse_event);
 		if (!CGRectContainsPoint(window_center, mouse)) {
+			CGEventMask event_mask = CGEventMaskBit(kCGEventLeftMouseDown) | CGEventMaskBit(kCGEventLeftMouseUp) | CGEventMaskBit(kCGEventRightMouseDown) | CGEventMaskBit(kCGEventRightMouseUp) | CGEventMaskBit(kCGEventOtherMouseDown) | CGEventMaskBit(kCGEventOtherMouseUp) | CGEventMaskBit(kCGEventMouseMoved) | CGEventMaskBit(kCGEventLeftMouseDragged) | CGEventMaskBit(kCGEventRightMouseDragged);
+			CFMachPortRef event_absorber = CGEventTapCreateForPSN(&psn, kCGTailAppendEventTap, kCGEventTapOptionDefault, event_mask, DeleteEventCallback, NULL);
+
 			CGFloat x = mouse.x, y = mouse.y;
 			if (mouse.x > window_center.origin.x+window_center.size.width - 10) {
 				x = window_center.origin.x+window_center.size.width - 15;
-			} else if (mouse.x < window_center.origin.x - 10) {
+			} else if (mouse.x < window_center.origin.x) {
 				x = window_center.origin.x + 15;
 			} else {
 				x = mouse.x;
 			}
 			if (mouse.y < window_center.origin.y + 20) {
 				y = window_center.origin.y + 25;
-			} else if (mouse.y > window_center.origin.y+window_center.size.height - 10) {
+			} else if (mouse.y > window_center.origin.y+window_center.size.height) {
 				y = window_center.origin.y+window_center.size.height - 15;
 			} else {
 				y = mouse.y;
 			}
+			
 			CGWarpMouseCursorPosition((CGPoint){x,y});
+			if (event_absorber) {
+				CFMachPortInvalidate(event_absorber);
+				CFRelease(event_absorber);
+			}
 		}
 		CFRelease(mouse_event);
 	}
