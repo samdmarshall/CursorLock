@@ -30,12 +30,13 @@ CFArrayRef GetWindowsForProcessWithPID(pid_t pid) {
 		CFArrayRef windows = CGWindowListCopyWindowInfo(kCGWindowListOptionOnScreenOnly, kCGNullWindowID);
 		CFMutableArrayRef app_windows = CFArrayCreateMutable(kCFAllocatorDefault, 0, NULL);
 		for (int b = 0; b < CFArrayGetCount(windows); b++) {
-			CFDictionaryRef dict = CFArrayGetValueAtIndex(windows, b);
+			CFDictionaryRef dict = CFRetain(CFArrayGetValueAtIndex(windows, b));
 			pid_t window_pid = GetPIDFromDictionary(dict, kCGWindowOwnerPID);
 			if (window_pid == pid) {
 				CFArrayAppendValue(app_windows, dict);
 			}
 		}
+		CFRelease(windows);
 		return app_windows;
 	} else {
 		return NULL;
@@ -119,7 +120,7 @@ static CGRect window_center;
 		for (NSDictionary *window_dict in windows) {
 			if (CFDictionaryContainsKey((CFDictionaryRef)window_dict, kCGWindowName)) {
 				[window_dictionaries addObject:window_dict];
-				NSString *name = CFDictionaryGetValue((CFDictionaryRef)window_dict, kCGWindowName);
+				NSString *name = (NSString *)CFDictionaryGetValue((CFDictionaryRef)window_dict, kCGWindowName);
 				[windowList addItemWithTitle:name];
 			}
 		}
